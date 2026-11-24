@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "s3-multipart-fixer"
+version = "0.1.0"
+description = "Scan, filter, abort and simulate S3 multipart uploads."
+requires-python = ">=3.11"
+dependencies = [
+  "aioboto3",
+  "boto3",
+  "loguru",
+  "python-dotenv>=1.0.0",
+  "requests>=2.31.0",
+  "requests-aws4auth>=1.1.1",
+]
+
+[project.scripts]
+multipart-fixer = "s3_multipart_fixer.cli:main"
+multipart-failure-lab = "s3_multipart_fixer.failure_lab:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

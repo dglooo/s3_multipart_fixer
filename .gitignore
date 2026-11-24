@@ -1,0 +1,33 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.log
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+.aws/
+
+# Рабочие данные и отчёты могут содержать имена объектов и другие данные S3.
+/files/**
+!/files/.gitkeep
+/report/**
+!/report/.gitkeep
+*.json
+*.jsonl
+*.csv
+
+# Большой тестовый файл из архивного кода.
+/_archive/*.bin
