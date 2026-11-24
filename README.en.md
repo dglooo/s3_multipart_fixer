@@ -1,6 +1,6 @@
 # s3_multipart_fixer
 
-Utilities for two tasks:
+Utilities for these tasks:
 
 1. Scan and filter in-progress S3 multipart uploads.
 2. Abort selected multipart uploads with optional verification.
@@ -47,14 +47,41 @@ The multipart lab supports two backends: `boto3` and `http`. Set `S3_MULTIPART_B
 For `scan` and `abort`, the default execution mode is `sync`. Async mode is enabled only with `--io-mode async`. Parallelism can be tuned via `S3_ASYNC_CONCURRENCY` or `--concurrency`.
 Async mode requires `aioboto3` and `aiobotocore`, which are included in `requirements.txt`.
 
-## Install
+## Install and activate the environment
+
+Use Python 3.11 or newer. Run the commands below from the parent directory of `s3_multipart_fixer`. All later examples use `python` after activation.
+
+**macOS / Linux (bash, zsh):**
 
 ```bash
 cd s3_multipart_fixer
 python3 -m venv .venv
-./.venv/bin/python -m pip install -r requirements.txt
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 cp .env.example .env
 ```
+
+**Windows PowerShell:**
+
+```powershell
+cd s3_multipart_fixer
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env
+```
+
+**Windows CMD:**
+
+```bat
+cd s3_multipart_fixer
+py -3 -m venv .venv
+.venv\Scripts\activate.bat
+python -m pip install -r requirements.txt
+copy .env.example .env
+```
+
+On subsequent runs, activate `.venv` again; you do not need to reinstall dependencies or copy `.env`. Use `python multipart_fixer.py ...` on all three platforms. In bash/zsh examples, `\` continues a command on the next line; run those commands on one line without `\` in PowerShell or CMD.
 
 `pip install -e .` is optional. You can run the project directly with `python multipart_fixer.py` and `python multipart_failure_lab.py`.
 
@@ -138,6 +165,8 @@ Execute abort from previously saved scan results:
 ```bash
 python multipart_fixer.py abort \
   --input-json report/scan.jsonl \
+  --io-mode async \
+  --concurrency 20 \
   --execute \
   --output report/abort-result.jsonl
 ```
@@ -188,9 +217,28 @@ Existing JSON/JSONL reports are in `report/`, which Git ignores. New reports def
 To leave uploads initiated on or after May 1, 2026 00:00 UTC untouched, scan and preview the older ones, then execute the same selection:
 
 ```bash
-python multipart_fixer.py scan --bucket my-bucket --initiated-before 2026-05-01T00:00:00Z --output report/scan-before-may.jsonl
+python multipart_fixer.py scan --bucket my-bucket --initiated-before 2026-05-01T00:00:00Z --io-mode async --concurrency 20 --output report/scan-before-may.jsonl
 python multipart_fixer.py abort --bucket my-bucket --input-json report/scan-before-may.jsonl --initiated-before 2026-05-01T00:00:00Z --output report/abort-before-may-dry-run.jsonl
-python multipart_fixer.py abort --bucket my-bucket --input-json report/scan-before-may.jsonl --initiated-before 2026-05-01T00:00:00Z --execute --output report/abort-before-may-result.jsonl
+python multipart_fixer.py abort --bucket my-bucket --input-json report/scan-before-may.jsonl --initiated-before 2026-05-01T00:00:00Z --io-mode async --concurrency 20 --execute --output report/abort-before-may-result.jsonl
 ```
 
 The second command is a dry-run. Inspect its report before running the third command. `--bucket` also filters records loaded from JSONL. For a rolling cutoff use `--older-than 30d` instead of `--initiated-before`.
+
+The dry-run from JSONL reads a local file, so async mode does not speed it up. Async scanning parallelizes part lookups; S3 upload-list pages are still fetched sequentially.
+
+## Cleanup without a separate scan report
+
+Run `abort` directly when you do not need a separate `scan` report or object statistics. It still lists multipart uploads from S3 and applies the date filter. First preview, then execute:
+
+```bash
+python multipart_fixer.py abort --bucket my-bucket --initiated-before 2026-05-01T00:00:00Z --io-mode async --concurrency 20 --output report/abort-direct-dry-run.jsonl
+python multipart_fixer.py abort --bucket my-bucket --initiated-before 2026-05-01T00:00:00Z --io-mode async --concurrency 20 --execute --output report/abort-direct-result.jsonl
+```
+
+Inspect the dry-run report before executing. Replace the date filter with `--older-than 30d` in both commands for a rolling cutoff. Add the same `--prefix some/path/` to both commands to limit the key space.
+
+The one-line commands above work in PowerShell and CMD after activating the environment. For a separate async scan on Windows, run:
+
+```text
+python multipart_fixer.py scan --bucket my-bucket --initiated-before 2026-05-01T00:00:00Z --io-mode async --concurrency 20 --output report/scan-before-may.jsonl
+```
